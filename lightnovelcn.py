@@ -17,10 +17,21 @@ class LNThread(object):
 
     def _generate_book_data(self):
         title_parts = self._parse_title()
-        translator_uid = self._find_translator_uid()
         chapters = self._find_chapters()
 
     def _find_chapters(self):
+        translator_uid = self._find_translator_uid()
+        chapters = []
+        for post in self.d('#postlist').children():
+            # Assume chapters of a book are contiguous posts made by the thread
+            # poster
+            uid = int(pq(post).find('.profile').children('dd').eq(0).text())
+            if uid == translator_uid:
+                chapters.append(self._parse_chapter(post))
+            else:
+                break
+
+    def _parse_chapter(self, post):
         pass
 
     def _find_translator_uid(self):
