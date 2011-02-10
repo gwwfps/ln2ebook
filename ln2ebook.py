@@ -3,7 +3,6 @@
 import argparse
 
 from urls import validate_url
-from lightnovelcn import LNThread
 
 
 url = 'http://www.lightnovel.cn/viewthread.php?tid=252294'
