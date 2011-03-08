@@ -2,7 +2,7 @@
 import httplib2
 from pyquery import PyQuery as pq
 
-from utils import flatten
+from utils import flatten, clean_html
 
 
 class LNThread(object):
@@ -22,16 +22,23 @@ class LNThread(object):
     def _find_chapters(self):
         translator_uid = self._find_translator_uid()
         chapters = []
+        pictures = []
         for post in self.d('#postlist').children():
             # Assume chapters of a book are contiguous posts made by the thread
             # poster
             uid = int(pq(post).find('.profile').children('dd').eq(0).text())
             if uid == translator_uid:
-                chapters.append(self._parse_chapter(post))
+                chapter = self._parse_chapter(post)
+                chapters.append(chapter.html())
+                pictures.append(self._find_pictures(chapter))
             else:
                 break
 
     def _parse_chapter(self, post):
+        content = pq(post).find('.postmessage')[0]
+        return pq(content)
+
+    def _find_pictures(self, chapter):
         pass
 
     def _find_translator_uid(self):
