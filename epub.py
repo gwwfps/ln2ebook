@@ -1,6 +1,6 @@
 import zipfile
 
-from utils import render
+from utils import render, fetch_url
 
 
 class EpubBook(object):
@@ -42,7 +42,12 @@ class EpubBook(object):
                                    content=self.chapters[i]))
 
     def _write_images(self, output):
-        pass
+        for i in range(len(self.images)):
+            ext = self.images[i].split('.')[-1]
+            image = fetch_url(self.images[i])
+            if not i:
+                output.writestr('OEBPS/images/cover.jpg', image)
+            output.writestr('OEBPS/images/img-{}.{}'.format(i, ext), image)
 
     def _write_opf(self, output):
         output.writestr('OEBPS/content.opf',

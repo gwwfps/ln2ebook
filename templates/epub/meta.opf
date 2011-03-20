@@ -18,7 +18,7 @@
     <item id="ch-${i}" href="ch-${i}.html" media-type="application/xhtml+xml"/>
     % endfor
     % if has_cover:
-    <item id="cover-image" href="images/cover.png" media-type="image/png"/>
+    <item id="cover-image" href="images/cover.jpg" media-type="image/png"/>
     % endif
   </manifest>
   <spine toc="ncx">

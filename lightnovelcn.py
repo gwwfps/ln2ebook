@@ -2,7 +2,7 @@
 import httplib2
 from pyquery import PyQuery as pq
 
-from utils import flatten, clean_html
+from utils import flatten, fetch_url
 
 
 class LNThread(object):
@@ -10,41 +10,61 @@ class LNThread(object):
         self.url = url
         self.page = self._fetch_page().decode('gbk')
         self.d = pq(self.page)
-        self.book_data = self._generate_book_data()
+        self._generate_book_data()
 
-    def output_book(self, filename):
-        pass
+    def output_book(self, output_cls, filename):
+        out = output_cls(self.title, self.chapters, self.images, self.url)
+        out.output_to_file(filename)
 
     def _generate_book_data(self):
         title_parts = self._parse_title()
-        chapters = self._find_chapters()
+        self._prompt_title_selection(title_parts)
+        self._find_chapters()
+
+    def _prompt_title_selection(self, title_parts):
+        for i in range(len(title_parts)):
+            print u'{}. {}'.format(i, title_parts[i])
+        print 'Choose the correct title:'
+        selections = raw_input()
+        selections = selections.split(' ')
+        self.title = ''.join(title_parts[int(s)] for s in selections)
 
     def _find_chapters(self):
         translator_uid = self._find_translator_uid()
-        chapters = []
-        pictures = []
+        self.chapters = []
+        self.images = []
         for post in self.d('#postlist').children():
             # Assume chapters of a book are contiguous posts made by the thread
             # poster
-            uid = int(pq(post).find('.profile').children('dd').eq(0).text())
+            try:
+                uid = int(pq(pq(post).find('.profile').children('dd')[0]).text())
+            except IndexError:
+                continue
             if uid == translator_uid:
                 chapter = self._parse_chapter(post)
-                chapters.append(chapter.html())
-                pictures.append(self._find_pictures(chapter))
+
+                # Find images within the chapter
+                for img in chapter.find('img'):
+                    pic = pq(img).attr('src')
+                    if pic.startswith('http'):
+                        ext = pic.split('.')[-1]
+                        pq(img).attr('src',
+                                     'images/img-{}.{}'.format(len(self.images),
+                                                               ext))
+                        self.images.append(pic)
+
+                self.chapters.append(chapter.html())
             else:
                 break
 
     def _parse_chapter(self, post):
-        content = pq(post).find('.postmessage')[0]
+        content = pq(post).find('.t_msgfontfix')[0]
         return pq(content)
-
-    def _find_pictures(self, chapter):
-        pass
 
     def _find_translator_uid(self):
         try:
             # Find UID of thread poster
-            return int(self.d('.profile').eq(0).children('dd').eq(0).text())
+            return int(pq(self.d('.profile').eq(0).children('dd')[0]).text())
         except ValueError:
             return None
 
@@ -67,6 +87,4 @@ class LNThread(object):
         if page:
             return page
         else:
-            h = httplib2.Http('.cache')
-            resp, content = h.request(self.url, "GET")
-            return content
+            return fetch_url(self.url)

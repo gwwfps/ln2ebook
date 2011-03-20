@@ -23,6 +23,6 @@ if __name__ == "__main__":
     
     handler, url = validate_url(args.url[0])
     resource = handler(url)
+    resource.output_book(EpubBook, args.output[0])
 
-    epub = EpubBook('hello', ['hello world', 'hihi', '3rd ch'], [], args.url[0])
-    epub.output_to_file(args.output[0])
+
