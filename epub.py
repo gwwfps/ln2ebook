@@ -4,12 +4,13 @@ from utils import render, fetch_url
 
 
 class EpubBook(object):
-    def __init__(self, title, chapters, images, bookid):
+    def __init__(self, title, chapters, images, bookid, cookie):
         self.title = title
         self.chapters = chapters
         self.images = images
         self.bookid = bookid
         self.has_cover = bool(images)
+        self.cookie = cookie
 
     def output_to_file(self, filename):
         output = zipfile.ZipFile(filename, 'w')
@@ -43,8 +44,11 @@ class EpubBook(object):
 
     def _write_images(self, output):
         for i in range(len(self.images)):
-            ext = self.images[i].split('.')[-1]
-            image = fetch_url(self.images[i])
+            url, ext = self.images[i]
+            print url
+            print self.cookie
+            image = fetch_url(url, self.cookie)
+            break
             if not i:
                 output.writestr('OEBPS/images/cover.jpg', image)
             output.writestr('OEBPS/images/img-{}.{}'.format(i, ext), image)
