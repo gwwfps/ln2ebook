@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import collections
 import httplib2
+import urllib
 from lxml.html.clean import Cleaner
 from mako.lookup import TemplateLookup
 
@@ -24,7 +25,10 @@ cleaner = Cleaner()
 def clean_html(html):
     return cleaner.clean_html(html)
 
-def fetch_url(url):
+def fetch_url(url, cookie=None):
+    if cookie is None:
+        cookie = ''
     h = httplib2.Http('.cache')
-    resp, content = h.request(url, "GET")
+    resp, content = h.request(url, "GET", headers={'Cookie': cookie})
+    print resp.get('set-cookie', '')
     return content
