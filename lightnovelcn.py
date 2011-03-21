@@ -1,9 +1,65 @@
 # -*- coding: utf-8 -*-
+from getpass import getpass
+import urllib
 import httplib2
 from pyquery import PyQuery as pq
 
 from utils import flatten, fetch_url
 
+
+class LNLogin(object):
+    COOKIE_FILE = '.cookies/www.lightnovel.cn'
+    LOGIN_URL = 'http://www.lightnovel.cn/logging.php?action=login'
+    SUBMIT_URL = 'http://www.lightnovel.cn/logging.php?action=login&loginsubmit=yes'
+    
+    def __init__(self, username):
+        self.username = username
+
+    def login(self):
+        # Fetch index with existing cookie
+        cookie = self.get_cookie()
+        page = fetch_url(self.LOGIN_URL, cookie)
+        if self.logged_in(page):
+            return True
+        else:
+            headers = {'Content-type': 'application/x-www-form-urlencoded'}
+            # Attempt login with details
+            formhash = pq(page).find('input[name=formhash]').val()
+            password = getpass()
+            
+            details = {'username': self.username,
+                       'formhash': formhash,
+                       'password': password,
+                       'cookietime': '2592000'}
+            http = httplib2.Http()
+            resp, content = http.request(self.SUBMIT_URL,
+                                         'POST',
+                                         headers=headers,
+                                         body=urllib.urlencode(details))
+            if self.logged_in(content):
+                self.set_cookie(resp['set-cookie'])
+                return True
+            else:
+                return False
+
+    @classmethod
+    def set_cookie(cls, cookie):
+        f = open(cls.COOKIE_FILE, 'w')
+        f.write(cookie)
+        f.close()
+
+    @classmethod
+    def get_cookie(cls):
+        cookie = ''
+        f = open(cls.COOKIE_FILE)
+        cookie = f.read()
+        f.close()
+        return cookie
+        
+    @classmethod
+    def logged_in(cls, page):
+        return bool(pq(page).find('#loginstatus'))        
+        
 
 class LNThread(object):
     def __init__(self, url):
@@ -13,7 +69,7 @@ class LNThread(object):
         self._generate_book_data()
 
     def output_book(self, output_cls, filename):
-        out = output_cls(self.title, self.chapters, self.images, self.url)
+        out = output_cls(self.title, self.chapters, self.images, self.url, LNLogin.get_cookie())
         out.output_to_file(filename)
 
     def _generate_book_data(self):
@@ -46,12 +102,18 @@ class LNThread(object):
                 # Find images within the chapter
                 for img in chapter.find('img'):
                     pic = pq(img).attr('src')
+                    ext = None
+                    if pic == 'images/common/none.gif':
+                        ext = pq(img).attr('alt').split('.')[-1]
+                        pic = 'http://www.lightnovel.cn/{}'.format(pq(img).attr('file'))
+
                     if pic.startswith('http'):
-                        ext = pic.split('.')[-1]
+                        if ext is None:
+                            ext = pic.split('.')[-1]                        
                         pq(img).attr('src',
                                      'images/img-{}.{}'.format(len(self.images),
                                                                ext))
-                        self.images.append(pic)
+                        self.images.append((pic,ext))
 
                 self.chapters.append(chapter.html())
             else:
@@ -87,4 +149,4 @@ class LNThread(object):
         if page:
             return page
         else:
-            return fetch_url(self.url)
+            return fetch_url(self.url, LNLogin.get_cookie())
