@@ -1,9 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 import argparse
-import shutil
 
 from urls import validate_url
+from utils import cj
 from epub import EpubBook
 
 
@@ -29,9 +29,12 @@ if __name__ == "__main__":
     username = args.user
     if username:
         login = login_handler(username)
-        login.login()
+        logged_in = False
+        while not logged_in:
+            logged_in = login.login()
     
     # Parsing and output
     resource = res_handler(url)
     resource.output_book(EpubBook, args.output[0])
 
+    cj.save('.cookies')

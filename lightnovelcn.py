@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 from getpass import getpass
-import urllib
-import httplib2
+import mechanize
 from pyquery import PyQuery as pq
 
 from utils import flatten, fetch_url
 
 
 class LNLogin(object):
-    COOKIE_FILE = '.cookies/www.lightnovel.cn'
     LOGIN_URL = 'http://www.lightnovel.cn/logging.php?action=login'
     SUBMIT_URL = 'http://www.lightnovel.cn/logging.php?action=login&loginsubmit=yes'
     
@@ -16,45 +14,27 @@ class LNLogin(object):
         self.username = username
 
     def login(self):
-        # Fetch index with existing cookie
-        cookie = self.get_cookie()
-        page = fetch_url(self.LOGIN_URL, cookie)
+        page = fetch_url(self.LOGIN_URL)
         if self.logged_in(page):
             return True
         else:
-            headers = {'Content-type': 'application/x-www-form-urlencoded'}
-            # Attempt login with details
-            formhash = pq(page).find('input[name=formhash]').val()
-            password = getpass()
-            
-            details = {'username': self.username,
-                       'formhash': formhash,
-                       'password': password,
-                       'cookietime': '2592000'}
-            http = httplib2.Http()
-            resp, content = http.request(self.SUBMIT_URL,
-                                         'POST',
-                                         headers=headers,
-                                         body=urllib.urlencode(details))
+            forms = mechanize.ParseResponse(mechanize.urlopen(self.LOGIN_URL),
+                                            backwards_compat=False)
+            form = forms[0]
+            form['username'] = self.username
+            form['password'] = getpass()
+
+            request = form.click()
+            try:
+                response = mechanize.urlopen(request)
+            except mechanize.HTTPError, response2:
+                exit('HTTP error while logging in.')
+
+            content = response.read()
             if self.logged_in(content):
-                self.set_cookie(resp['set-cookie'])
                 return True
             else:
                 return False
-
-    @classmethod
-    def set_cookie(cls, cookie):
-        f = open(cls.COOKIE_FILE, 'w')
-        f.write(cookie)
-        f.close()
-
-    @classmethod
-    def get_cookie(cls):
-        cookie = ''
-        f = open(cls.COOKIE_FILE)
-        cookie = f.read()
-        f.close()
-        return cookie
         
     @classmethod
     def logged_in(cls, page):
@@ -64,12 +44,12 @@ class LNLogin(object):
 class LNThread(object):
     def __init__(self, url):
         self.url = url
-        self.page = self._fetch_page().decode('gbk')
+        self.page = fetch_url(self.url).decode('gbk')
         self.d = pq(self.page)
         self._generate_book_data()
 
     def output_book(self, output_cls, filename):
-        out = output_cls(self.title, self.chapters, self.images, self.url, LNLogin.get_cookie())
+        out = output_cls(self.title, self.chapters, self.images, self.url, LNLogin)
         out.output_to_file(filename)
 
     def _generate_book_data(self):
@@ -140,13 +120,3 @@ class LNThread(object):
             else:
                 title_parts = flatten([part.split(sep) for part in title_parts])
         return filter(bool, [t.strip() for t in title_parts])
-
-    def _fetch_page(self):
-        # Assume finished books don't change,
-        # so we can just get the content from cache
-        cache = httplib2.FileCache('.cache')
-        page = cache.get(self.url)
-        if page:
-            return page
-        else:
-            return fetch_url(self.url, LNLogin.get_cookie())

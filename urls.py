@@ -1,34 +1,24 @@
 # -*- coding: utf-8 -*-
-import collections
-import httplib2
-import urllib
-from lxml.html.clean import Cleaner
-from mako.lookup import TemplateLookup
+from urlparse import urlparse
+
+from lightnovelcn import LNThread, LNLogin
 
 
-lookup = TemplateLookup(directories=['./templates'],
-                        module_directory='/tmp/mako_modules')
-def render(template_path, **context):
-    template = lookup.get_template(template_path)
-    return template.render_unicode(**context).encode('utf-8', 'replace')
+class UnsupportedURL(Exception): pass
 
-# From answer at http://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists-in-python/2158532#2158532
-def flatten(l):
-    for el in l:
-        if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
-            for sub in flatten(el):
-                yield sub
-        else:
-            yield el
+domain_handlers = {
+    'www.lightnovel.cn': (LNThread, LNLogin)
+}
+shortcuts = {
+    'ln': lambda pr: 'http://www.lightnovel.cn/viewthread.php?tid={}'.format(pr.netloc)
+}
 
-cleaner = Cleaner()
-def clean_html(html):
-    return cleaner.clean_html(html)
+def validate_url(url):
+    pr = urlparse(url, 'http')
 
-def fetch_url(url, cookie=None):
-    if cookie is None:
-        cookie = ''
-    h = httplib2.Http('.cache')
-    resp, content = h.request(url, "GET", headers={'Cookie': cookie})
-    print resp.get('set-cookie', '')
-    return content
+    if pr.scheme == 'http' and pr.netloc in domain_handlers:
+        return domain_handlers[pr.netloc], pr.geturl()
+    elif pr.scheme in shortcuts:
+        return validate_url(shortcuts[pr.scheme](pr))
+    else:
+        raise UnsupportedURL
