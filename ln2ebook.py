@@ -43,6 +43,6 @@ if __name__ == "__main__":
     resource = res_handler(url)
     out_fn = args.output[0]
     out_cls = output_classes.get(out_fn.split('.')[-1], output_classes['epub'])
-    resource.output_book(out_cls, outfn)
+    resource.output_book(out_cls, out_fn)
 
     cj.save('.cookies')
