@@ -44,11 +44,10 @@ class EpubBook(object):
 
     def _write_images(self, output):
         for i in range(len(self.images)):
-            url, ext = self.images[i]
-            image = fetch_url(url)
+            filename, image = self.images[i]
             if not i:
                 output.writestr('OEBPS/images/cover.jpg', image)
-            output.writestr('OEBPS/images/img-{}.{}'.format(i, ext), image)
+            output.writestr('OEBPS/{}'.format(filename), image)
 
     def _write_opf(self, output):
         output.writestr('OEBPS/content.opf',

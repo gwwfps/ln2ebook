@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 from getpass import getpass
+from cStringIO import StringIO
+import Image
+import ImageOps
 import mechanize
 from pyquery import PyQuery as pq
 
@@ -23,6 +26,7 @@ class LNLogin(object):
             form = forms[0]
             form['username'] = self.username
             form['password'] = getpass()
+            form.find_control("cookietime").items[0].selected = True
 
             request = form.click()
             try:
@@ -81,23 +85,43 @@ class LNThread(object):
 
                 # Find images within the chapter
                 for img in chapter.find('img'):
-                    pic = pq(img).attr('src')
-                    ext = None
-                    if pic == 'images/common/none.gif':
-                        ext = pq(img).attr('alt').split('.')[-1]
-                        pic = 'http://www.lightnovel.cn/{}'.format(pq(img).attr('file'))
-
-                    if pic.startswith('http'):
-                        if ext is None:
-                            ext = pic.split('.')[-1]                        
-                        pq(img).attr('src',
-                                     'images/img-{}.{}'.format(len(self.images),
-                                                               ext))
-                        self.images.append((pic,ext))
+                    self._process_image(img)
 
                 self.chapters.append(chapter.html())
             else:
                 break
+
+    def _process_image(self, img):
+        pic = pq(img).attr('src')
+        ext = None
+
+        # Attachment
+        if pic == 'images/common/none.gif':
+            pic = 'http://www.lightnovel.cn/{}'.format(pq(img).attr('file'))
+
+        if pic.startswith('http'):
+            # Resize/divide image if necessary
+            image_buffer = StringIO(fetch_url(pic))
+            image = Image.open(image_buffer)
+            # Grayscale size saving too little
+            #image = ImageOps.grayscale(image)
+            if image.size[0] > image.size[1]:
+                image = image.rotate(90)
+            image.thumbnail((600, 800), Image.ANTIALIAS)
+
+            filename = self._add_image(image)
+            pq(img).attr('src', filename)
+            pq(img).attr('width', str(image.size[0]))
+            pq(img).attr('height', str(image.size[1]))
+            image_buffer.close()
+
+    def _add_image(self, image):
+        filename = 'images/img-{}.jpg'.format(len(self.images))
+        out = StringIO()
+        image.save(out, 'jpeg')
+        self.images.append((filename, out.getvalue()))
+        out.close()
+        return filename
 
     def _parse_chapter(self, post):
         content = pq(post).find('.t_msgfontfix')[0]
