@@ -1,4 +1,5 @@
 import struct
+import time
 
 from basebook import BaseBook
 
@@ -10,7 +11,7 @@ class MobiBook(BaseBook):
         self._write_mobi_header()
         self._write_exth_header()
 
-        self._write_pdb_wrapper()
+        self._write_pdb_wrapper(output)
         output.close()
 
     def _write_palmdoc_header(self, output):
@@ -30,11 +31,41 @@ class MobiBook(BaseBook):
         struct.pack('>')
 
     def _write_pdb_wrapper(self, output):
-        values = [
-            title, # Book title
-            2, # File attribute (0x0002=Read-only)
-            1, # File version
-            
-        ]
+        format = '>32shhLLLlll4s4sllh'
 
-        
+        title = self._mobi_title()
+        mobi_date = self._mobi_now()
+        num_records = 0
+
+        values = (
+            title, # Book title
+            0, # File attribute
+            0, # File version
+            mobi_date, # Creation date
+            mobi_date, # Modification date
+            0, # Last backup date
+            0,
+            0,
+            0,
+            'BOOK', # Type
+            'MOBI', # Program
+            0, # uniqueIDseed
+            0, # Always 0
+            num_records # No. of records
+        )
+
+    def _mobi_now(self):
+        OFFSET = 2082844800L
+        return int(time.time()+OFFSET)
+
+    def _mobi_title(self):
+        title = ''
+        for i in range(32):
+            c = self.title[i]
+            if c == ' ':
+                c = '_'
+            if ord(c) < 128:
+                title += c
+            else:
+                title += '{:x}'.format(ord(c))
+        return title
