@@ -5,7 +5,13 @@ import argparse
 from urls import validate_url
 from utils import cj
 from epub import EpubBook
+from mobi import MobiBook
 
+
+output_classes = {
+    'mobi': MobiBook,
+    'epub': EpubBook
+}
 
 if __name__ == "__main__":
     # Argument parser setup
@@ -35,6 +41,8 @@ if __name__ == "__main__":
     
     # Parsing and output
     resource = res_handler(url)
-    resource.output_book(EpubBook, args.output[0])
+    out_fn = args.output[0]
+    out_cls = output_classes.get(out_fn.split('.')[-1], output_classes['epub'])
+    resource.output_book(out_cls, outfn)
 
     cj.save('.cookies')

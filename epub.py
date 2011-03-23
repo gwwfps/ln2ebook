@@ -1,17 +1,10 @@
 import zipfile
 
-from utils import render, fetch_url
+from basebook import BaseBook
+from utils import render
 
 
-class EpubBook(object):
-    def __init__(self, title, chapters, images, bookid, auth):
-        self.title = title
-        self.chapters = chapters
-        self.images = images
-        self.bookid = bookid
-        self.has_cover = bool(images)
-        self.auth = auth
-
+class EpubBook(BaseBook):
     def output_to_file(self, filename):
         output = zipfile.ZipFile(filename, 'w')
         self._write_mimetype(output)
