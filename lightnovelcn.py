@@ -48,8 +48,8 @@ class LNLogin(object):
 class LNThread(object):
     def __init__(self, url):
         self.url = url
-        self.page = fetch_url(self.url).decode('gbk')
-        self.d = pq(self.page)
+        self.next_page = 1
+        self._turn_page()
         self._generate_book_data()
 
     def output_book(self, output_cls, filename):
@@ -59,6 +59,9 @@ class LNThread(object):
     def _generate_book_data(self):
         title_parts = self._parse_title()
         self._prompt_title_selection(title_parts)
+        self.chapters = []
+        self.images = []
+        self._translator_uid = self._find_translator_uid()
         self._find_chapters()
 
     def _prompt_title_selection(self, title_parts):
@@ -70,9 +73,6 @@ class LNThread(object):
         self.title = ''.join(title_parts[int(s)] for s in selections)
 
     def _find_chapters(self):
-        translator_uid = self._find_translator_uid()
-        self.chapters = []
-        self.images = []
         for post in self.d('#postlist').children():
             # Assume chapters of a book are contiguous posts made by the thread
             # poster
@@ -80,20 +80,32 @@ class LNThread(object):
                 uid = int(pq(pq(post).find('.profile').children('dd')[0]).text())
             except IndexError:
                 continue
-            if uid == translator_uid:
+            if uid == self._translator_uid:
                 chapter = self._parse_chapter(post)
 
                 # Find images within the chapter
                 for img in chapter.find('img'):
                     self._process_image(img)
 
+                # Remove fluff
+                for p in chapter.find('.pstatus'):
+                    pq(p).remove()
+
                 self.chapters.append(chapter.html())
             else:
                 break
+        else:
+            self._turn_page()
+            self._find_chapters()
+
+    def _turn_page(self):
+        url = '{}&page={}'.format(self.url, self.next_page)
+        self.page = fetch_url(url).decode('gbk')
+        self.d = pq(self.page)
+        self.next_page += 1
 
     def _process_image(self, img):
         pic = pq(img).attr('src')
-        ext = None
 
         # Attachment
         if pic == 'images/common/none.gif':
