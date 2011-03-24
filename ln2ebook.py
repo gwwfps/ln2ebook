@@ -21,10 +21,10 @@ if __name__ == "__main__":
     parser.add_argument('output', metavar='OUTPUT', nargs=1,
                         help='output file name')
     parser.add_argument('--clear-cache', action='store_true')
-    parser.add_argument('-f', '--format', 
-                        help='output ebook format (EPUB only for now)')
     parser.add_argument('-u', '--user', 
                         help='user account for the resource')
+    parser.add_argument('-k', '--kindlegen',
+                        help='path to kindlegen executable (for MOBI only)')
     args = parser.parse_args()
 
     # Get the approriate handler for the resource url
@@ -43,6 +43,6 @@ if __name__ == "__main__":
     resource = res_handler(url)
     out_fn = args.output[0]
     out_cls = output_classes.get(out_fn.split('.')[-1], output_classes['epub'])
-    resource.output_book(out_cls, outfn)
+    resource.output_book(out_cls, out_fn, args)
 
     cj.save('.cookies')
