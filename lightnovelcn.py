@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from getpass import getpass
 from cStringIO import StringIO
+from urllib2 import HTTPError
 import Image
 import ImageOps
 import mechanize
@@ -113,19 +114,22 @@ class LNThread(object):
 
         if pic.startswith('http'):
             # Resize/divide image if necessary
-            image_buffer = StringIO(fetch_url(pic))
-            image = Image.open(image_buffer)
-            # Grayscale size saving too little
-            #image = ImageOps.grayscale(image)
-            if image.size[0] > image.size[1]:
-                image = image.rotate(90)
-            image.thumbnail((600, 800), Image.ANTIALIAS)
+            try:
+                image_buffer = StringIO(fetch_url(pic))
+                image = Image.open(image_buffer)
+                # Grayscale size saving too little
+                #image = ImageOps.grayscale(image)
+                if image.size[0] > image.size[1]:
+                    image = image.rotate(90)
+                image.thumbnail((600, 800), Image.ANTIALIAS)
 
-            filename = self._add_image(image)
-            pq(img).attr('src', filename)
-            pq(img).attr('width', str(image.size[0]))
-            pq(img).attr('height', str(image.size[1]))
-            image_buffer.close()
+                filename = self._add_image(image)
+                pq(img).attr('src', filename)
+                pq(img).attr('width', str(image.size[0]))
+                pq(img).attr('height', str(image.size[1]))
+                image_buffer.close()
+            except HTTPError:
+                print 'Cannot find image: {}'.format(pic)
 
     def _add_image(self, image):
         filename = 'images/img-{}.jpg'.format(len(self.images))

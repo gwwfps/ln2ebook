@@ -5,7 +5,7 @@ from utils import render
 
 
 class EpubBook(BaseBook):
-    def output_to_file(self, filename):
+    def output_to_file(self, filename, args):
         output = zipfile.ZipFile(filename, 'w')
         self._write_mimetype(output)
         self._write_meta_inf(output)
