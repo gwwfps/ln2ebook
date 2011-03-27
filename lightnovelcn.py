@@ -53,9 +53,9 @@ class LNThread(object):
         self._turn_page()
         self._generate_book_data()
 
-    def output_book(self, output_cls, filename):
+    def output_book(self, output_cls, filename, args):
         out = output_cls(self.title, self.chapters, self.images, self.url)
-        out.output_to_file(filename)
+        out.output_to_file(filename, args)
 
     def _generate_book_data(self):
         title_parts = self._parse_title()
