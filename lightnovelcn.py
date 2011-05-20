@@ -101,7 +101,7 @@ class LNThread(object):
 
     def _turn_page(self):
         url = '{}&page={}'.format(self.url, self.next_page)
-        self.page = fetch_url(url).decode('gbk')
+        self.page = fetch_url(url).decode('gbk', 'replace')
         self.d = pq(self.page)
         self.next_page += 1
 
@@ -134,6 +134,8 @@ class LNThread(object):
     def _add_image(self, image):
         filename = 'images/img-{}.jpg'.format(len(self.images))
         out = StringIO()
+        if image.mode not in ('L', 'RGB'):
+            image = image.convert('RGB')
         image.save(out, 'jpeg')
         self.images.append((filename, out.getvalue()))
         out.close()
