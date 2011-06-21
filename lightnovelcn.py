@@ -5,13 +5,14 @@ from urllib2 import HTTPError
 import Image
 import ImageOps
 import mechanize
+from ClientForm import ParseResponse
 from pyquery import PyQuery as pq
 
 from utils import flatten, fetch_url
 
 
 class LNLogin(object):
-    LOGIN_URL = 'http://www.lightnovel.cn/logging.php?action=login'
+    LOGIN_URL = 'http://www.lightnovel.cn/member.php?mod=logging&action=login'
     SUBMIT_URL = 'http://www.lightnovel.cn/logging.php?action=login&loginsubmit=yes'
     
     def __init__(self, username):
@@ -22,9 +23,9 @@ class LNLogin(object):
         if self.logged_in(page):
             return True
         else:
-            forms = mechanize.ParseResponse(mechanize.urlopen(self.LOGIN_URL),
-                                            backwards_compat=False)
-            form = forms[0]
+            forms = ParseResponse(mechanize.urlopen(self.LOGIN_URL),
+                                  backwards_compat=False)
+            form = forms[1]
             form['username'] = self.username
             form['password'] = getpass()
             form.find_control("cookietime").items[0].selected = True
@@ -78,7 +79,7 @@ class LNThread(object):
             # Assume chapters of a book are contiguous posts made by the thread
             # poster
             try:
-                uid = int(pq(pq(post).find('.profile').children('dd')[0]).text())
+                uid = int(pq(pq(post).find('.pil').children('dd')[0]).text())
             except IndexError:
                 continue
             if uid == self._translator_uid:
@@ -100,7 +101,9 @@ class LNThread(object):
             self._find_chapters()
 
     def _turn_page(self):
-        url = '{}&page={}'.format(self.url, self.next_page)
+        parts = self.url.split('-')
+        parts[2] = str(self.next_page)
+        url = '-'.join(parts)
         self.page = fetch_url(url).decode('gbk', 'replace')
         self.d = pq(self.page)
         self.next_page += 1
@@ -109,7 +112,7 @@ class LNThread(object):
         pic = pq(img).attr('src')
 
         # Attachment
-        if pic == 'images/common/none.gif':
+        if pic == 'static/image/common/none.gif':
             pic = 'http://www.lightnovel.cn/{}'.format(pq(img).attr('file'))
 
         if pic.startswith('http'):
@@ -142,19 +145,19 @@ class LNThread(object):
         return filename
 
     def _parse_chapter(self, post):
-        content = pq(post).find('.t_msgfontfix')[0]
+        content = pq(post).find('.t_f')[0]
         return pq(content)
 
     def _find_translator_uid(self):
         try:
             # Find UID of thread poster
-            return int(pq(self.d('.profile').eq(0).children('dd')[0]).text())
+            return int(pq(self.d('.pil').eq(0).children('dd')[0]).text())
         except ValueError:
             return None
 
     def _parse_title(self):
-        raw_title = self.d('#threadtitle').text()
-        seps = ['[', ']', u'【', u'】', '(', ')']
+        raw_title = self.d('#thread_subject').text()
+        seps = ['[', ']', u'【', u'】', '(', ')', ' ']
         title_parts = None
         for sep in seps:
             if title_parts is None:

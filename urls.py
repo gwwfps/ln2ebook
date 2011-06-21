@@ -10,7 +10,7 @@ domain_handlers = {
     'www.lightnovel.cn': (LNThread, LNLogin)
 }
 shortcuts = {
-    'ln': lambda pr: 'http://www.lightnovel.cn/viewthread.php?tid={}'.format(pr.netloc)
+    'ln': lambda pr: 'http://www.lightnovel.cn/thread-{}-1-1.html'.format(pr.netloc)
 }
 
 def validate_url(url):
